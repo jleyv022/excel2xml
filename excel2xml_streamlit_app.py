@@ -12,7 +12,7 @@ st.markdown("More Details about iTunes Package TV Specification 5.3.6  >>> [Clic
 col1, col2 = st.columns(2)
 with col1:
     share = st.checkbox("Asset Share (optional)", key="disabled")
-    bundle = st.checkbox("Bundle Only (optional)", key="disabled")
+    bundle = st.checkbox("Bundle Only (optional)", key="true")
 
 with col2:
     option = st.radio(
