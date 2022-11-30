@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<package xmlns="http://apple.com/itunes/importer" version="tv5.3">
+  <provider>cstv</provider>
+  <language>fr-FR</language>
+  <video>
+        <type>tv</type>
+        <subtype>episode</subtype>
+        <container_id>XXXXXXXXXX</container_id>
+        <container_position>XXXXXXXXXX</container_position>
+        <vendor_id>XXXXXXXXXX</vendor_id>
+        <episode_production_number>XXXXXXXXXX</episode_production_number>
+        <countries_of_origin>
+            <country primary="true">US</country>
+        </countries_of_origin>
+        <production_countries>
+            <country primary="true">US</country>
+        </production_countries>
+        <original_spoken_locale>en-US</original_spoken_locale>
+        <title>XXXXXXXXXX</title>
+        <studio_release_title>XXXXXXXXXX</studio_release_title>
+        <description>XXXXXXXXXX</description>
+        <release_date>XXXXXXXXXX</release_date>
+        <copyright_cline>XXXXXXXXXX</copyright_cline>
+        <ratings>
+            <rating system="fr-tv" code="XXXXXXXXXX"/>
+        </ratings>
+        <assets>
+            <asset type="full">
+                <data_file role="source">
+                    <locale name="fr-FR"/>
+                    <file_name>XXXXXXXXXX.mov</file_name>
+                    <size>XXXXXXXXXX</size>
+                    <checksum type="md5">XXXXXXXXXX</checksum>
+                    <attribute name="crop.top">XXXXXXXXXX</attribute>
+                    <attribute name="crop.bottom">XXXXXXXXXX</attribute>
+                    <attribute name="crop.left">XXXXXXXXXX</attribute>
+                    <attribute name="crop.right">XXXXXXXXXX</attribute>
+                    <attribute name="image.textless_master">true</attribute>
+                </data_file>
+            </asset>
+        </assets>
+  		<preview starttime="360"/>
+        <products>
+            <product>
+                <territory>FR</territory>
+                <sales_start_date>XXXXXXXXXX</sales_start_date>
+                <cleared_for_sale>true</cleared_for_sale>
+                <bundle_only>false</bundle_only>
+            </product>
+        </products>
+    </video>
+</package>
