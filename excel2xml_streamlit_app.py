@@ -1,5 +1,4 @@
 import streamlit as st
-from streamlit import caching
 import pandas as pd
 from lxml import etree as et
 from zipfile import ZipFile
@@ -93,5 +92,4 @@ shutil.move(os.path.abspath(xml_folder), os.path.abspath(zip_name))
 shutil.make_archive(zip_name, 'zip', os.path.abspath(zip_name))
 
 with open(zip_name+'.zip', 'rb') as f:
-    if st.download_button('Download Zip', f, file_name=zip_name+'.zip'):
-        caching.clear_cache()
+    st.download_button('Download Zip', f, file_name=zip_name+'.zip')
