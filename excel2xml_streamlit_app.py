@@ -1,6 +1,6 @@
 import streamlit as st
 import pandas as pd
-import xml.etree.ElementTree as et
+from lxml import etree as et
 from zipfile import ZipFile
 import shutil
 import os
