@@ -90,6 +90,7 @@ os.mkdir(zip_name)
 shutil.move(os.path.abspath(package_folder), os.path.abspath(zip_name))
 shutil.move(os.path.abspath(xml_folder), os.path.abspath(zip_name))
 shutil.make_archive(zip_name, 'zip', os.path.abspath(zip_name))
+shutil.rmtree(zip_name)
 
 with open(zip_name+'.zip', 'rb') as f:
     st.download_button('Download Zip', f, file_name=zip_name+'.zip')
