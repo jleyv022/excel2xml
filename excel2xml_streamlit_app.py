@@ -6,7 +6,7 @@ import shutil
 import os
 
 st.title("iTunes XML Generator 🍏")
-st.markdown("Create iTunes Episodic XML's by uploading an excel metadata spreadsheets")
+st.markdown("Create iTunes Episodic XML's by uploading an excel metadata spreadsheet")
 st.markdown("More Details about iTunes Package TV Specification 5.3.6  >>> [Click Here](https://help.apple.com/itc/tvspec/#/apdATD1E170-D1E1A1303-D1E170A1126)")
 
 col1, col2 = st.columns(2)
