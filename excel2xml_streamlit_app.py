@@ -11,8 +11,10 @@ st.markdown("More Details about iTunes Package TV Specification 5.3.6  >>> [Clic
 
 col1, col2 = st.columns(2)
 with col1:
-    share = st.checkbox("Asset Share (optional)", key="disabled")
-    bundle = st.checkbox("Bundle Only (optional)", key="true")
+    share = st.checkbox("Asset Share (optional)")
+    bundle = st.checkbox("Bundle Only (optional)")
+    with open('TEMPLATES/XXXXX_SX_Metadata_XX_iTunes_TV.xlsx', 'rb') as my_file:
+        st.download_button(label = 'Download Excel Template', data = my_file, file_name = 'XXXXX_SX_Metadata_XX_iTunes_TV.xlsx', mime = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
 
 with col2:
     option = st.radio(
@@ -35,13 +37,15 @@ try:
             if index > 2:
                 package_name = str(row['Unnamed: 23'])
                 full_sale_date = str(row['Unnamed: 34'])
-                zip_name = str(row['ITUNES'])
-
+                
+                if bundle:
+                    for bundle_only in template_root[2].iter('{http://apple.com/itunes/importer}products'):
+                        bundle_only[0][3].text = 'true' 
                 if "en" in option:
                     template_root[2][16][0][0][1].text = package_name+'.mov'#mov file name
                     template_root[2][16][0][1][1].text = package_name+'.scc'#scc file name
                     template_root[2][18][0][1].text = full_sale_date[0:10]
-                else:
+                if not "en" in option:
                     template_root[2][15][0][0][1].text = package_name+".mov"#mov file name
                     template_root[2][17][0][1].text = full_sale_date[0:10]
                 rating = template_root[2][14][0].attrib
