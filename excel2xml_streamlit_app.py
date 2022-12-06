@@ -26,6 +26,8 @@ uploaded_file = st.file_uploader("Create XML")
 try:
     if uploaded_file is not None:
         dataframe = pd.read_excel(uploaded_file)
+        if share:
+            option = option + "_ASSET_SHARE"
         tree = et.parse(f'TEMPLATES/iTunes_TV_EPISODE_TEMPLATE_v5-3_{option}.xml')
         template_root = tree.getroot()
         package_folder = "iTunes Package with XML"
@@ -36,20 +38,20 @@ try:
         for index, row in dataframe.iterrows():
             if index > 2:
                 package_name = str(row['Unnamed: 23'])
-                full_sale_date = str(row['Unnamed: 34'])
-                
+                template_root[2][14][0].attrib['code'] = str(row['Unnamed: 7'])#rating code
                 if bundle:
                     for bundle_only in template_root[2].iter('{http://apple.com/itunes/importer}products'):
                         bundle_only[0][3].text = 'true' 
-                if "en" in option:
+                if share:
+                    for shared_asset_id in template_root[2].iter('{http://apple.com/itunes/importer}share_assets'):
+                        shared_asset_id.attrib['vendor_id'] = str(row['Unnamed: 27'])
+
+                if "en" in option and not "_ASSET_SHARE" in option:
                     template_root[2][16][0][0][1].text = package_name+'.mov'#mov file name
                     template_root[2][16][0][1][1].text = package_name+'.scc'#scc file name
-                    template_root[2][18][0][1].text = full_sale_date[0:10]
-                if not "en" in option:
+
+                if not "en" in option and not "_ASSET_SHARE" in option:
                     template_root[2][15][0][0][1].text = package_name+".mov"#mov file name
-                    template_root[2][17][0][1].text = full_sale_date[0:10]
-                rating = template_root[2][14][0].attrib
-                rating['code'] = str(row['Unnamed: 7'])
 
                 for container_id in template_root[2].iter('{http://apple.com/itunes/importer}container_id'):
                     container_id.text = str(row['ITUNES'])
@@ -79,6 +81,10 @@ try:
                 for copyright in template_root[2].iter('{http://apple.com/itunes/importer}copyright_cline'):
                     copyright.text = str(row['Unnamed: 15'])
 
+                for sales_start_date in template_root[2].iter('{http://apple.com/itunes/importer}products'):
+                    full_sale_date = str(row['Unnamed: 34'])
+                    sales_start_date[0][1].text = full_sale_date[0:10]
+
                 package = f'{package_name}.itmsp'
                 xml = "metadata.xml"
                 os.makedirs(package)
@@ -96,8 +102,9 @@ try:
     shutil.move(os.path.abspath(xml_folder), os.path.abspath(zip_name))
     shutil.make_archive(zip_name, 'zip', os.path.abspath(zip_name))
     shutil.rmtree(zip_name)
-
     with open(zip_name+'.zip', 'rb') as f:
         st.download_button('Download Zip', f, file_name=zip_name+'.zip')
-except Exception:
+except NameError:
     pass
+except:
+  st.error('Invalid File')
