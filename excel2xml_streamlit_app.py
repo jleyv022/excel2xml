@@ -3,7 +3,6 @@ import pandas as pd
 from lxml import etree as et
 import shutil
 import os
-import io
 
 st.title("iTunes XML Generator 🍏")
 st.markdown("Create iTunes Episodic XML's by uploading an Excel metadata spreadsheet")
@@ -14,125 +13,131 @@ with col1:
     share = st.checkbox("Asset Share (optional)")
     bundle = st.checkbox("Bundle Only (optional)")
     with open('TEMPLATES/XXXXX_SX_Metadata_XX_iTunes_TV.xlsx', 'rb') as my_file:
-        st.download_button(label = 'Download Excel Template', data = my_file, file_name = 'XXXXX_SX_Metadata_XX_iTunes_TV.xlsx', mime = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+        st.download_button(label='Download Excel Template', data=my_file, file_name='XXXXX_SX_Metadata_XX_iTunes_TV.xlsx', mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
 
 with col2:
-    option = st.radio(
-        "Select a Locale Name",
-        ("en-CA", "en-AU", "en-GB", "de-DE", "fr-FR", "us-US")
-    )
+    option = st.radio("Select a Locale Name", ("en-CA", "en-AU", "en-GB", "de-DE", "fr-FR", "us-US"))
 
-uploaded_file = st.file_uploader("Create XML")
+uploaded_file = st.file_uploader("Upload Excel Metadata File")
 
-# Check if file is uploaded
-if uploaded_file is not None:
+if uploaded_file:
     try:
-        # Read the Excel file with the correct engine
-        dataframe = pd.read_excel(uploaded_file, engine="openpyxl")
+        # Read Excel with openpyxl (better compatibility)
+        df = pd.read_excel(uploaded_file, engine="openpyxl")
+        if df.empty:
+            st.error("Error: The uploaded Excel file is empty or not read properly.")
+            st.stop()
+
+        # Display column names for debugging
+        st.write("**Columns Found in Uploaded File:**", df.columns.tolist())
+
+        # Ensure required columns exist
+        required_cols = {
+            'package_name': 'Unnamed: 23',
+            'rating_code': 'Unnamed: 7',
+            'asset_share_id': 'Unnamed: 27',
+            'container_position': 'Unnamed: 24',
+            'title': 'TITLE',
+            'itunes_id': 'ITUNES',
+            'display_title': 'Unnamed: 3',
+            'studio_title': 'Unnamed: 4',
+            'description': 'Unnamed: 5',
+            'release_date': 'Unnamed: 14',
+            'copyright': 'Unnamed: 15',
+            'sales_date': 'Unnamed: 34'
+        }
+
+        # Check if all required columns exist
+        missing_cols = [key for key, col in required_cols.items() if col not in df.columns]
+        if missing_cols:
+            st.error(f"Error: Missing columns in the uploaded file: {missing_cols}")
+            st.stop()
+
+        # Apply the correct naming scheme
+        if share:
+            option += "_ASSET_SHARE"
+
+        # Load XML template
+        xml_template_path = f'TEMPLATES/iTunes_TV_EPISODE_TEMPLATE_v5-3_{option}.xml'
+        if not os.path.exists(xml_template_path):
+            st.error(f"Error: XML template for {option} not found.")
+            st.stop()
         
-        # Check for empty dataframe
-        if dataframe.empty:
-            st.error("The uploaded Excel file is empty or not read properly.")
-        else:
-            st.write("Excel file loaded successfully. Preview:")
-            st.write(dataframe.head())  # Preview first few rows to check
+        tree = et.parse(xml_template_path)
+        template_root = tree.getroot()
 
-            # Check the columns in the uploaded file
-            st.write("Columns in the uploaded file:", dataframe.columns.tolist())
-            
-            # Ensure the right columns are available
-            required_columns = ['Unnamed: 23', 'Unnamed: 7', 'Unnamed: 27', 'Unnamed: 24', 'TITLE', 'Unnamed: 3', 'Unnamed: 4', 'Unnamed: 5', 'Unnamed: 14', 'Unnamed: 15', 'Unnamed: 34']
-            for col in required_columns:
-                if col not in dataframe.columns:
-                    st.error(f"Missing required column: {col}")
-                    break
-            
+        # Create directories
+        package_folder = "iTunes Package with XML"
+        xml_folder = "XML"
+        os.makedirs(package_folder, exist_ok=True)
+        os.makedirs(xml_folder, exist_ok=True)
+
+        # Process each row
+        for index, row in df.iterrows():
+            if index < 3:  # Skip first few rows if they are headers or empty
+                continue
+
+            package_name = str(row[required_cols['package_name']]).strip()
+            if not package_name or package_name.lower() == "nan":
+                st.warning(f"Skipping row {index + 1}: Invalid package name.")
+                continue
+
+            # Update XML fields
+            template_root[2][14][0].attrib['code'] = str(row[required_cols['rating_code']]).strip()
+
+            if bundle:
+                for bundle_only in template_root[2].iter('{http://apple.com/itunes/importer}products'):
+                    bundle_only[0][3].text = 'true'
+
             if share:
-                option = option + "_ASSET_SHARE"
+                for shared_asset_id in template_root[2].iter('{http://apple.com/itunes/importer}share_assets'):
+                    shared_asset_id.attrib['vendor_id'] = str(row[required_cols['asset_share_id']]).strip()
 
-            # Load the appropriate template XML file
-            tree = et.parse(f'TEMPLATES/iTunes_TV_EPISODE_TEMPLATE_v5-3_{option}.xml')
-            template_root = tree.getroot()
-            
-            # Create directories
-            package_folder = "iTunes Package with XML"
-            os.makedirs(package_folder, exist_ok=True)
-            xml_folder = "XML"
-            os.makedirs(xml_folder, exist_ok=True)
+            # Set MOV and SCC filenames
+            if "en" in option and "_ASSET_SHARE" not in option:
+                template_root[2][16][0][0][1].text = package_name + '.mov'
+                template_root[2][16][0][1][1].text = package_name + '.scc'
+            else:
+                template_root[2][15][0][0][1].text = package_name + ".mov"
 
-            # Iterate through the dataframe and generate XMLs
-            for index, row in dataframe.iterrows():
-                if index > 2:  # Skipping first rows
-                    package_name = str(row['Unnamed: 23'])
-                    template_root[2][14][0].attrib['code'] = str(row['Unnamed: 7'])  # rating code
-                    
-                    if bundle:
-                        for bundle_only in template_root[2].iter('{http://apple.com/itunes/importer}products'):
-                            bundle_only[0][3].text = 'true'
+            # Populate XML fields
+            for field, xml_tag in [
+                ('itunes_id', 'container_id'),
+                ('container_position', 'container_position'),
+                ('package_name', 'vendor_id'),
+                ('title', 'episode_production_number'),
+                ('display_title', 'title'),
+                ('studio_title', 'studio_release_title'),
+                ('description', 'description'),
+                ('release_date', 'release_date'),
+                ('copyright', 'copyright_cline'),
+            ]:
+                value = str(row[required_cols[field]]).strip()
+                for element in template_root[2].iter(f'{{http://apple.com/itunes/importer}}{xml_tag}'):
+                    element.text = value
 
-                    if share:
-                        for shared_asset_id in template_root[2].iter('{http://apple.com/itunes/importer}share_assets'):
-                            shared_asset_id.attrib['vendor_id'] = str(row['Unnamed: 27'])
+            # Process sales start date
+            full_sale_date = str(row[required_cols['sales_date']]).strip()
+            for sales_start_date in template_root[2].iter('{http://apple.com/itunes/importer}products'):
+                sales_start_date[0][1].text = full_sale_date[:10]  # Ensure only YYYY-MM-DD
 
-                    # Locale specific file names
-                    if "en" in option and not "_ASSET_SHARE" in option:
-                        template_root[2][16][0][0][1].text = package_name + '.mov'
-                        template_root[2][16][0][1][1].text = package_name + '.scc'
+            # Save XML
+            xml_filename = f"{package_name}.xml"
+            tree.write(xml_filename, encoding="utf-8", xml_declaration=True)
+            shutil.move(xml_filename, xml_folder)
 
-                    if not "en" in option and not "_ASSET_SHARE" in option:
-                        template_root[2][15][0][0][1].text = package_name + ".mov"
+        # ZIP XML Folder
+        zip_name = "XML_Files"
+        shutil.make_archive(zip_name, 'zip', xml_folder)
 
-                    # Update XML elements with row data
-                    for container_id in template_root[2].iter('{http://apple.com/itunes/importer}container_id'):
-                        container_id.text = str(row['ITUNES'])
+        # Provide download link
+        with open(zip_name + ".zip", 'rb') as f:
+            st.download_button('Download XML Zip', f, file_name=zip_name + ".zip")
 
-                    for container_position in template_root[2].iter('{http://apple.com/itunes/importer}container_position'):
-                        container_position.text = str(row['Unnamed: 24'])
+        st.success("✅ XML files generated and ready for download.")
 
-                    for vendor_id in template_root[2].iter('{http://apple.com/itunes/importer}vendor_id'):
-                        vendor_id.text = str(row['Unnamed: 23'])
+    except Exception as e:
+        st.error(f"❌ An error occurred: {e}")
 
-                    for episode_production_number in template_root[2].iter('{http://apple.com/itunes/importer}episode_production_number'):
-                        episode_production_number.text = str(row['TITLE'])
-
-                    for title in template_root[2].iter('{http://apple.com/itunes/importer}title'):
-                        title.text = str(row['Unnamed: 3'])
-
-                    for studio_release_title in template_root[2].iter('{http://apple.com/itunes/importer}studio_release_title'):
-                        studio_release_title.text = str(row['Unnamed: 4'])
-
-                    for description in template_root[2].iter('{http://apple.com/itunes/importer}description'):
-                        description.text = str(row['Unnamed: 5'])
-
-                    for release_date in template_root[2].iter('{http://apple.com/itunes/importer}release_date'):
-                        full_date = str(row['Unnamed: 14'])
-                        release_date.text = full_date[0:10]
-
-                    for copyright in template_root[2].iter('{http://apple.com/itunes/importer}copyright_cline'):
-                        copyright.text = str(row['Unnamed: 15'])
-
-                    for sales_start_date in template_root[2].iter('{http://apple.com/itunes/importer}products'):
-                        full_sale_date = str(row['Unnamed: 34'])
-                        sales_start_date[0][1].text = full_sale_date[0:10]
-
-                    # Create package and XML files
-                    package = f'{package_name}.itmsp'
-                    xml = "metadata.xml"
-                    os.makedirs(package, exist_ok=True)
-                    package_path = os.path.abspath(package)
-                    tree.write(f'{package_name}.xml', encoding="utf-8", xml_declaration=True)
-                    tree.write(xml, encoding="utf-8", xml_declaration=True)
-                    xml_path = os.path.abspath(xml)
-                    shutil.move(xml_path, package_path)
-                    shutil.move(os.path.abspath(package_path), os.path.abspath(package_folder))
-                    shutil.move(os.path.abspath(f'{package_name}.xml'), os.path.abspath(xml_folder))
-
-            # Create and download the ZIP file
-            zip_name = container_id.text
-            os.mkdir(zip_name)
-            shutil.move(os.path.abspath(package_folder), os.path.abspath(zip_name))
-            shutil.move(os.path.abspath(xml_folder), os.path.abspath(zip_name))
-            shutil.make_archive(zip_name, 'zip', os.path.abspath(zip_name))
-            shutil.rmtree(zip_name)
-            with open(zip_name + '.zip', 'rb') as f:
-                st.download_button('Download Zip', f, file_name=zip
+else:
+    st.info("📂 Please upload an Excel file to continue.")
